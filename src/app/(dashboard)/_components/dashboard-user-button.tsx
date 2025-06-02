@@ -39,7 +39,7 @@ export function DashboardUserButton() {
     authClient.signOut({
       fetchOptions: {
         onSuccess() {
-          router.push("/sign-in");
+          router.push("/auth/sign-in");
         },
       },
     });

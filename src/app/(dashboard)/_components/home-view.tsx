@@ -21,7 +21,7 @@ export default function HomeView() {
         onClick={() =>
           authClient.signOut({
             fetchOptions: {
-              onSuccess: () => router.push("/sign-in"),
+              onSuccess: () => router.push("/auth/sign-in"),
             },
           })
         }>
