@@ -1,13 +1,13 @@
 "use client";
 
 import { format } from "date-fns";
-// import humanizeDuration from "humanize-duration";
+import humanizeDuration from "humanize-duration";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   CircleCheckIcon,
   CircleXIcon,
   ClockArrowUpIcon,
-  // ClockFadingIcon,
+  ClockFadingIcon,
   CornerDownRightIcon,
   LoaderIcon,
 } from "lucide-react";
@@ -17,13 +17,13 @@ import type { MeetingGetMany } from "../../types";
 import { Badge } from "@/components/ui/badge";
 import { GenerateAvatar } from "@/components/generate-avatar";
 
-// function formatDuration(seconds: number) {
-//   return humanizeDuration(seconds * 1000, {
-//     largest: 1,
-//     units: ["h", "m", "s"],
-//     round: true,
-//   });
-// }
+function formatDuration(seconds: number) {
+  return humanizeDuration(seconds * 1000, {
+    largest: 1,
+    units: ["h", "m", "s"],
+    round: true,
+  });
+}
 
 const statusIconMap = {
   upcoming: ClockArrowUpIcon,
@@ -92,18 +92,18 @@ export const columns: ColumnDef<MeetingGetMany[number]>[] = [
       );
     },
   },
-  // {
-  //   accessorKey: "duration",
-  //   header: "Duration",
-  //   cell: ({ row }) => (
-  //     <Badge
-  //       variant="outline"
-  //       className="capitalize [&>svg]:size-4 flex items-center gap-x-2]">
-  //       <ClockFadingIcon className="text-blue-700" />
-  //       {row.original.duration
-  //         ? formatDuration(row.original.duration)
-  //         : "No Duration"}
-  //     </Badge>
-  //   ),
-  // },
+  {
+    accessorKey: "duration",
+    header: "Duration",
+    cell: ({ row }) => (
+      <Badge
+        variant="outline"
+        className="capitalize [&>svg]:size-4 flex items-center gap-x-2]">
+        <ClockFadingIcon className="text-blue-700" />
+        {row.original.duration
+          ? formatDuration(row.original.duration)
+          : "No Duration"}
+      </Badge>
+    ),
+  },
 ];
