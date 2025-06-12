@@ -1,14 +1,20 @@
-import { useForm } from "react-hook-form";
+"use client";
+
+import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
+import { agentsInsertSchema } from "@/modules/agents/schemas";
+import type { AgentGetOne } from "@/modules/agents/types";
 
 import { GenerateAvatar } from "@/components/generate-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -16,34 +22,65 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useTRPC } from "@/trpc/client";
-import { agentsInsertSchema } from "../../schemas";
-import type { AgentGetOne } from "../../types";
+import { toast } from "sonner";
 
-type Props = {
+interface AgentFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   initialValues?: AgentGetOne;
-};
+}
 
-export function AgentForm({ onSuccess, onCancel, initialValues }: Props) {
+export const AgentForm = ({
+  onSuccess,
+  onCancel,
+  initialValues,
+}: AgentFormProps) => {
   const trpc = useTRPC();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const createAgent = useMutation(
     trpc.agents.create.mutationOptions({
-      async onSuccess() {
-        await queryClient.invalidateQueries(trpc.agents.getMany.queryOptions());
-        if (initialValues?.id) {
-          await queryClient.invalidateQueries(
-            trpc.agents.getOne.queryOptions({ id: initialValues.id })
-          );
-        }
+      onSuccess: async () => {
+        await queryClient.invalidateQueries(
+          trpc.agents.getMany.queryOptions({})
+        );
+
+        await queryClient.invalidateQueries(
+          trpc.premium.getFreeUsage.queryOptions()
+        );
+
         onSuccess?.();
       },
-      onError(error) {
+      onError: (error) => {
         toast.error(error.message);
-        // TODO: check if error code is "Forbidden", redirect to "/upgrade"
+
+        if (error.data?.code === "FORBIDDEN") {
+          router.push("/upgrade");
+        }
+      },
+    })
+  );
+
+  const updateAgent = useMutation(
+    trpc.agents.update.mutationOptions({
+      onSuccess: async () => {
+        await queryClient.invalidateQueries(
+          trpc.agents.getMany.queryOptions({})
+        );
+
+        if (initialValues?.id) {
+          await queryClient.invalidateQueries(
+            trpc.agents.getOne.queryOptions({
+              id: initialValues.id,
+            })
+          );
+        }
+
+        onSuccess?.();
+      },
+      onError: (error) => {
+        toast.error(error.message);
       },
     })
   );
@@ -56,12 +93,15 @@ export function AgentForm({ onSuccess, onCancel, initialValues }: Props) {
     },
   });
 
-  const isEdit = !!initialValues?.id;
-  const isPending = createAgent.isPending;
+  const isEdit = !!initialValues;
+  const isPending = createAgent.isPending || updateAgent.isPending;
 
-  const onSubmit = async (values: z.infer<typeof agentsInsertSchema>) => {
+  const onSubmit = (values: z.infer<typeof agentsInsertSchema>) => {
     if (isEdit) {
-      //
+      updateAgent.mutate({
+        ...values,
+        id: initialValues?.id,
+      });
     } else {
       createAgent.mutate(values);
     }
@@ -69,56 +109,65 @@ export function AgentForm({ onSuccess, onCancel, initialValues }: Props) {
 
   return (
     <Form {...form}>
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <GenerateAvatar
           seed={form.watch("name")}
           variant="botttsNeutral"
-          className="size-16 border"
+          className="border size-16"
         />
         <FormField
-          name="name"
           control={form.control}
+          name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="e.g. Math John" />
+                <Input placeholder="e.g. Math Tutor" {...field} />
               </FormControl>
+              <FormMessage />
+              <FormDescription>
+                {"This is your agent's display name."}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         <FormField
-          name="instructions"
           control={form.control}
+          name="instructions"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Instructions</FormLabel>
               <FormControl>
                 <Textarea
                   {...field}
-                  placeholder="You are a helpful math assistant that can answer question and help with assignments."
+                  placeholder="e.g. You are a helpful math assistant that 
+                  can answer questions and help with assignments."
                 />
               </FormControl>
+              <FormMessage />
+              <FormDescription>
+                {"This is your agent's instructions."}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="flex justify-between gap-x-2">
+        <div className="flex items-center gap-x-2">
           {onCancel && (
             <Button
+              type="button"
               variant="ghost"
               disabled={isPending}
-              type="button"
               onClick={onCancel}>
               Cancel
             </Button>
           )}
-          <Button disabled={isPending} type="submit">
+          <Button type="submit" disabled={isPending}>
             {isEdit ? "Update" : "Create"}
           </Button>
         </div>
       </form>
     </Form>
   );
-}
+};

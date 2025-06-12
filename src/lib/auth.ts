@@ -6,8 +6,24 @@ import { user } from "@/db/schema/user";
 import { account } from "@/db/schema/account";
 import { session } from "@/db/schema/session";
 import { verification } from "@/db/schema/verification";
+import { checkout, polar, portal } from "@polar-sh/better-auth";
+import { polarClient } from "./polar";
+
 
 export const auth = betterAuth({
+    plugins: [
+        polar({
+            client: polarClient,
+            createCustomerOnSignUp: true,
+            use: [
+                checkout({
+                    successUrl: process.env.POLAR_SUCCESS_URL,
+                    authenticatedUsersOnly: true,
+                }),
+                portal(),
+            ],
+        }),
+    ],
     socialProviders: {
         github: {
             clientId: process.env.GITHUB_CLIENT_ID as string,

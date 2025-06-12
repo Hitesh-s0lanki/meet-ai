@@ -17,6 +17,8 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
 import humanizeDuration from "humanize-duration";
+import Transcript from "./transcript";
+import { ChatProvider } from "./chat-provider";
 
 type Props = {
   data: MeetingGetOne;
@@ -65,6 +67,11 @@ const CompletedState = ({ data }: Props) => {
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
+
+        <TabsContent value="transcript">
+          <Transcript meetingId={data.id} />
+        </TabsContent>
+
         <TabsContent value="recording">
           <div className="bg-white rounded-lg border px-4 py-5">
             <video
@@ -150,6 +157,9 @@ const CompletedState = ({ data }: Props) => {
               </div>
             </div>
           </div>
+        </TabsContent>
+        <TabsContent value="chat">
+          <ChatProvider meetingId={data.id} meetingName={data.name} />
         </TabsContent>
       </Tabs>
     </div>

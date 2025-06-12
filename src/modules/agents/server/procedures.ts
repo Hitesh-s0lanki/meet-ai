@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_SIZE } from '@/constants';
 import { db } from '@/db';
 import { agents } from '@/db/schema/agent';
-import { createTRPCRouter, protectedProcedure } from '@/trpc/init';
+import { createTRPCRouter, premiumProcedure, protectedProcedure } from '@/trpc/init';
 import { agentsInsertSchema, agentsUpdateSchema } from '../schemas';
 
 export const agentsRouter = createTRPCRouter({
@@ -69,7 +69,7 @@ export const agentsRouter = createTRPCRouter({
         items: data,
       };
     }),
-  create: protectedProcedure.input(agentsInsertSchema).mutation(async ({ input, ctx }) => {
+  create: premiumProcedure("agents").input(agentsInsertSchema).mutation(async ({ input, ctx }) => {
     const [createdAgent] = await db
       .insert(agents)
       .values({ ...input, userId: ctx.auth.user.id })
