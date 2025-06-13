@@ -39,53 +39,64 @@ export const meetingsRouter = createTRPCRouter({
                 .select()
                 .from(meetings)
                 .where(
-                    and(eq(meetings.id, input.id), eq(meetings.userId, ctx.auth.user.id))
-                )
+                    and(eq(meetings.id, input.id), eq(meetings.userId, ctx.auth.user.id)),
+                );
 
             if (!existingMeeting) {
                 throw new TRPCError({
                     code: "NOT_FOUND",
-                    message: "Meeting not found"
-                })
+                    message: "Meeting not found",
+                });
             }
 
-            if (!existingMeeting.transcriptUrl)
-                return []
+            if (!existingMeeting.transcriptUrl) {
+                return [];
+            }
 
             const transcript = await fetch(existingMeeting.transcriptUrl)
                 .then((res) => res.text())
                 .then((text) => JSONL.parse<StreamTranscriptItem>(text))
-                .catch(() => { return [] })
+                .catch(() => []);
 
             const speakerIds = [
-                ...new Set(transcript.map((item) => item.speaker_id))
-            ]
+                ...new Set(transcript.map((item) => item.speaker_id)),
+            ];
 
-            const userSpeakers = await db.select()
+            const userSpeakers = await db
+                .select()
                 .from(user)
                 .where(inArray(user.id, speakerIds))
-                .then((users) => (
+                .then((users) =>
                     users.map((user) => ({
                         ...user,
-                        image: user.image ?? generateAvatarUri({ seed: user.name, variant: "initials" })
-                    }))
-                ))
+                        image:
+                            user.image ??
+                            generateAvatarUri({
+                                seed: user.name,
+                                variant: "initials",
+                            }),
+                    })),
+                );
 
-            const agentSpeakers = await db.select()
+            const agentSpeakers = await db
+                .select()
                 .from(agents)
                 .where(inArray(agents.id, speakerIds))
-                .then((agents) => (
+                .then((agents) =>
                     agents.map((agent) => ({
                         ...agent,
-                        image: user.image ?? generateAvatarUri({ seed: agent.name, variant: "botttsNeutral" })
-                    }))
-                ))
+                        image: generateAvatarUri({
+                            seed: agent.name,
+                            variant: "botttsNeutral",
+                        }),
+                    })),
+                );
 
-            const speakers = [...userSpeakers, ...agentSpeakers]
+            const speakers = [...userSpeakers, ...agentSpeakers];
 
-            return transcript.map((item) => {
+            const transcriptWithSpeakers = transcript.map((item) => {
                 const speaker = speakers.find(
-                    (speaker) => speaker.id === item.speaker_id
+                    (speaker) => speaker.id === item.speaker_id,
                 );
 
                 if (!speaker) {
@@ -93,20 +104,26 @@ export const meetingsRouter = createTRPCRouter({
                         ...item,
                         user: {
                             name: "Unknown",
-                            image: generateAvatarUri({ seed: "Unknown", variant: "initials" })
-                        }
-                    }
+                            image: generateAvatarUri({
+                                seed: "Unknown",
+                                variant: "initials",
+                            }),
+                        },
+                    };
                 }
 
                 return {
                     ...item,
                     user: {
                         name: speaker.name,
-                        image: speaker.image
-                    }
-                }
-            })
+                        image: speaker.image,
+                    },
+                };
+            });
+
+            return transcriptWithSpeakers;
         }),
+
     generateToken: protectedProcedure.mutation(async ({ ctx }) => {
         await streamVideo.upsertUsers([
             {
