@@ -27,7 +27,7 @@ const Page = async ({ searchParams }: Props) => {
     headers: await headers(),
   });
 
-  if (!session) redirect("/sign-in");
+  if (!session) redirect("/auth/sign-in");
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(

@@ -25,7 +25,7 @@ export default async function Page({ searchParams }: Props) {
   });
 
   if (!session) {
-    redirect("/sign-in");
+    redirect("/auth/sign-in");
   }
 
   const queryClient = getQueryClient();
